@@ -727,6 +727,128 @@ class cpanel {
         return false;
     }
     
+    /*
+     * @description:Create database user Creates a MySQL user
+     * @param string $username MySQL user
+     * @param string $password MySQL password
+     * @return bool returns true on success or false on failure.
+     * @access public.
+     */ 
+    function createDatabseUser($username,$password) {
+        $data['user'] = $username;
+        $data['pass'] = $password;
+        $response = $this->fetchData('sql/adduser.html', $data);
+        if (strpos($response, 'Added')) {
+            return true;
+        }
+        return false;
+    }
+
+    /*
+     * @description:Delete database user Permenently deletes the MySQL user.
+     * @param string $username MySQL user
+     * @return bool true if sucsess else false
+     * @access public.
+     */
+    function deleteDatabseUser($username) {
+        $data['user'] = $username;
+        $response = $this->fetchData('sql/deluser.html', $data);
+        if (strpos($response, 'Removed')) {
+            return true;
+        }
+        return false;
+    }
+    
+    
+    /*
+     * @description:Create database,Creates a MySQL database with the specified name
+     * @param string $database database name
+     * @return bool Returns true on success or false on failure.
+     * @access public. 
+     */
+    function createDataBase($database) {
+        $data['db'] = $database;
+        $response = $this->fetchData('sql/adddb.html', $data);
+        if (strpos($response, 'Added')) {
+            return true;
+        }
+        return false;
+    }
+    
+    /**
+     * @description:Delete database Permanently drops a MySQL database
+     * @param string $database database name
+     * @return bool returns true on success or false on failure.
+     * @access public. 
+     */
+    function deleteDataBase($database) {
+        $data['db'] = $database;
+        $response = $this->fetchData('sql/deldb.html', $data);
+        if (strpos($response, 'dropped')) {
+            return true;
+        }
+        return false;
+    }
+    
+    /**
+     * @description:Add user to database Gives the specified user all permissions on the database
+     * @param string $database database name
+     * @param string $user MySQL username to add to database
+     * @return bool Returns true on success or false on failure.
+     * @access public. 
+     */
+    function addUserToDatabase($database,$user) {
+        $data['user'] = $user;
+        $data['db'] = $database;
+        $data['ALL'] = 'ALL';
+        $response = $this->fetchData('sql/addusertodb.html', $data);
+        if (strpos($response, 'Added')) {
+            return true;
+        }
+        return false;
+    }
+
+    /**
+     * @description:Delete user from database Removes the user's permissions from this database.
+     * @param string $database database name
+     * @param string $user MySQL username
+     * @return bool True if sucsess false else
+     * @access public. 
+     */
+    function delUserFromDatabase($database,$user) {
+        $data['user'] = $user;
+        $data['db'] = $database;
+        $response = $this->fetchData('sql/deluserfromdb.html', $data);
+        if (strpos($response, 'Deleted')) {
+            return true;
+        }
+        return false;
+    }
+
+    /**
+     * @description:Get full backup of cpanel.
+     * @param string $email Email address for notification
+     * @param string $ftpusername user name of ftp to which back up uploaded
+     * @param string $ftp_password password of ftp to which back up uploaded
+     * @param string $ftp_mod default=ftp ->active , 'passiveftp'-> passive
+     * @return bool True if sucsess false else
+     * @access public. 
+     */
+    function backupCpanel($email,$ftpusername,$ftp_password,$ftp_mod='ftp'){
+        
+        $data['dest'] = $ftp_mod;
+        $data['email'] = $email;
+        $data['server'] = $this->cpanel_host;
+        $data['user'] = $ftpusername;
+        $data['pass'] = $ftp_password;
+        $response = $this->fetchData('backup/dofullbackup.html', $data);
+        if (strpos($response, 'Deleted')) {
+            return true;
+        }
+        return false;
+    }
+    
+    
     
 }
 
