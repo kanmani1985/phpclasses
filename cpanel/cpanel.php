@@ -32,7 +32,7 @@ class cpanel {
     }
 
     function fetchData($url, $data = '') {
-        $url = $this->path . $url;
+        $url = $this->cpanel_path . $url;
         if (is_array($data)) {
             $url = $url . '?';
             foreach ($data as $key => $value) {
@@ -41,12 +41,12 @@ class cpanel {
             $url = substr($url, 0, -1);
         }
         $response = '';
-        $fp = fsockopen($this->ssl . $this->host, $this->port);
+        $fp = fsockopen($this->cpanel_ssl . $this->cpanel_host, $this->cpanel_port);
         if (!$fp) {
             return false;
         }
         $out = 'GET ' . $url . ' HTTP/1.0' . "\r\n";
-        $out .= 'Authorization: Basic ' . $this->auth . "\r\n";
+        $out .= 'Authorization: Basic ' . $this->cpanel_auth . "\r\n";
         $out .= 'Connection: Close' . "\r\n\r\n";
         fwrite($fp, $out);
         while (!feof($fp)) {
@@ -70,7 +70,7 @@ class cpanel {
      */
 
     function changePassword($password) {
-        $data['oldpass'] = $this->password;
+        $data['oldpass'] = $this->cpanel_password;
         $data['newpass'] = $password;
         $response = $this->fetchData('passwd/changepass.html', $data);
         if (strpos($response, 'has been') && !strpos($response, 'could not')) {
@@ -269,7 +269,7 @@ class cpanel {
         return $this->parseIndex('Bandwidth \(this month\)', 'float');
     }
 
-    /**
+    /*
      * @description: Get hosting package name
      * @param : no parameter passed
      * @return string
@@ -279,7 +279,7 @@ class cpanel {
         return $this->parseIndex('Hosting package');
     }
 
-    /**
+    /*
      * @description: Get shared IP address
      * @param : no parameter passed
      * @return string
@@ -288,7 +288,187 @@ class cpanel {
     function getSharedIP() {
         return $this->parseIndex('Shared Ip Address');
     }
+    /* @description:Create email account in cPanel
+     * @param string $email email account 
+     * @param string $password email account password
+     * @param int $quota quota for email account in megabytes
+     * @return bool Returns true on success or false on failure.
+     * @access public.
+     */
 
+    function createEmailAccount($email,$password,$quota='5') {
+        $data['email'] = $email;
+        $data['domain'] = $this->cpanel_host;
+        $data['password'] = $password;
+        $data['quota'] = $quota;
+        $response = $this->fetchData('mail/doaddpop.html', $data);
+        if (strpos($response, 'failure') || strpos($response, 'already exists')) {
+            return false;
+        }
+        return true;
+    }
+    
+    /*
+     * @description:Delete email account, Permanenetly removes email account.
+     * @param string $email email account for delete
+     * @return bool Returns true on success or false on failure.
+     * @access public.
+     */
+    function deleteEmailAccount($email) {
+        $data['email'] = $email;
+        $data['domain'] = $this->cpanel_host;
+        $response = $this->fetchData('mail/realdelpop.html', $data);
+        if (strpos($response, 'success')) {
+            return true;
+        }
+        return false;
+    }
+    
+    /*
+     * @description:Get space used by account
+     * @param string $email email account
+     * @return int Returns the amount of disk space used by email account in megabytes.
+     * @access public.
+     */
+    function getUsedSpaceOfEmailAccount($email) {
+        $usedSpace = array();
+        preg_match('/' . $email . '@' . $this->cpanel_host . "<\\/font><\\/td>\n        <td align=\"center\" valign=\"top\">([^&]*)/", $this->fetchData('mail/pops.html?extras=disk'), $usedSpace);
+        return $usedSpace[1];
+    }
+
+    /*
+     * @description:Get account storage quota
+     * @param string $email email account
+     * @return int Returns amount of disk space allowed for email account in megabytes.
+     * @access public.
+     */
+    function getQuotaOfEmailAccount($email) {
+        $quota = array();
+        $data['email'] = $email;
+        $data['domain'] = $this->cpanel_host;
+        preg_match('/quota" value="([^"]*)/', $this->fetchData('mail/editquota.html', $data), $quota);
+        return ($quota[1] == 0) ? 'Unlimited' : intval($quota[1]);
+    }
+
+    /*
+     * @description:Modify account storage quota
+     * @param int $quota quota for email account in megabytes
+     * @param string $email email account
+     * @return bool Returns true on success or false on failure.
+     * @access public.
+     */
+    function changeQuotaOfEmailAccount($quota,$email) {
+        $data['email'] = $email;
+        $data['domain'] = $this->cpanel_host;
+        $data['quota'] = $quota;
+        $response = $this->fetchData('mail/doeditquota.html', $data);
+        if (strpos($response, 'success')) {
+            return true;
+        }
+        return false;
+    }
+
+    /*
+     * @description:Change email account password
+     * @param string $password email account password
+     * @param string $email email account
+     * @return bool Returns true on success or false on failure.
+     * @access public.
+     */
+    function changePasswordOfEmailAccount($password,$email) {
+        $data['email'] = $email;
+        $data['domain'] = $this->cpanel_host;
+        $data['password'] = $password;
+        $response = $this->fetchData('mail/dopasswdpop.html', $data);
+        if (strpos($response, 'success') && !strpos($response, 'failure')) {
+            return true;
+        }
+        return false;
+    }
+
+    /*
+     * @description:List email forwarders
+     * @param string $email email account
+     * @return array Returns a numerically-indexed array of forwarders for the email account. Returns an empty array if there are no forwarders.
+     * @access public.
+     */
+    function listForwardersOfEmailAccount($email) {
+        $forwarders = array();
+        preg_match_all('/\?email=' . $email . '@' . $this->cpanel_host . '=([^"]*)/', $this->fetchData('mail/fwds.html'), $forwarders);
+        return $forwarders[1];
+    }
+
+    /*
+     * @description:Create email forwarder
+     * @param string $email email account
+     * @param string $forward forwarding address
+     * @return bool Returns true on success or false on failure.
+     * @access public.
+     */
+    function addForwarderOfEmailAccount($forward,$email) {
+        $data['email'] = $email;
+        $data['domain'] = $this->cpanel_host;
+        $data['forward'] = $forward;
+        $response = $this->fetchData('mail/doaddfwd.html', $data);
+        if (strpos($response, 'redirected')) {
+            return true;
+        }
+        return false;
+    }
+
+    /*
+     * @description:Delete email forwarder ,Permanently removes the account's email forwarder and returns true.
+     * @param string $forwarder forwarding address to delete
+     * @param string $email email account
+     * @return bool
+     * @access public.
+     */
+    function delForwarderOfEmailAccount($forwarder,$email) {
+        $data['email'] = $email . '@' . $this->cpanel_host . '=' . $forwarder;
+        $this->fetchData('mail/dodelfwd.html', $data);
+        return true;
+    }
+
+    /*
+     * @description:Create email autoresponder
+     * @param string $from from email address
+     * @param string $subject email subject line
+     * @param string $charset character set
+     * @param bool $html true for HTML email
+     * @param string $body body of email message
+     * @param string $email email account
+     * @return bool Returns true on success or false on failure.
+     * @access public.
+     */
+    function addAutoResponder($from, $subject, $charset, $html, $body,$email) {
+        $data['email'] = $email;
+        $data['domain'] = $this->cpanel_host;
+        $data['from'] = $from;
+        $data['subject'] = $subject;
+        $data['charset'] = $charset;
+        if ($html) {
+            $data['html'] = $html;
+        }
+        $data['body'] = $body;
+        $response = $this->fetchData('mail/doaddars.html', $data);
+        if (strpos($response, 'success') && !strpos($response, 'failure')) {
+            return true;
+        }
+        return false;
+    }
+
+    /*
+     * @description:Delete email autoresponder ,
+     *  @param string $email email account
+     * @return bool Deletes autoresponder for email account if it exists , and returns true.
+     * @access public.
+     */
+    function delAutoResponder($email) {
+        $this->fetchData('mail/dodelautores.html?email=' . $email . '@' . $this->cpanel_host);
+        return true;
+    }
+
+    
 }
 
 ?>
