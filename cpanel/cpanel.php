@@ -632,7 +632,100 @@ class cpanel {
         return false;
     }
 
-    
+    /*
+     * @description:Create FTP account
+     * @param string $account username of ftp account
+     * @param string $password account password
+     * @param string $quota disk space quota in megabytes
+     * @param string directory user's home directory
+     * @return bool Returns true on success or false on failure.
+     * @access public.
+     */
+    function createFtp($account,$password, $quota, $directory) {
+        $data['login'] = $account;
+        $data['password'] = $password;
+        $data['quota'] = $quota;
+        $data['homedir'] = $directory;
+        $response = $this->fetchData('ftp/doaddftp.html', $data);
+        if (strpos($response, 'failure') || strpos($response, 'Fatal') || !strpos($response, 'Added')) {
+            return false;
+        }
+        return true;
+    }
+
+    /*
+     * @description:Get used space
+     * @param string $account username of ftp account
+     * @return int Returns the amount of disk space used by the FTP account.
+     * @access public.
+     */
+    function getUsedSpaceOfFtp($account) {
+        $usedSpace = explode('<td>' . $account . '</td>', $this->fetchData('ftp/accounts.html'));
+        $usedSpace = explode('</td><td>', $usedSpace[1], 2);
+        return floatval(substr($usedSpace[1], 0, strpos($usedSpace[1], '/')));
+    }
+
+    /*
+     * @description:Get storage quota
+     * @param string $account username of ftp account
+     * @return bool Returns the storage quota of the FTP account in megabytes.
+     * @access public.
+     */
+    function getQuotaOfFtp($account) {
+        $quota = array();
+        $data['acct'] = $account;
+        preg_match('/"quota" value="([^"]*)/', $this->fetchData('ftp/editquota.html', $data), $quota);
+        return ($quota[1] == 0) ? 'Unlimited' : intval($quota[1]);
+    }
+
+    /*
+     * @description:Change storage quota Modifies the maximum disk space allowed for the FTP account.
+     * @param string $account username of ftp account
+     * @param int $quota new quota in megabytes
+     * @return bool Returns true on success or false on failure.
+     * @access public.
+     */
+    function changeQuotaOfFtp($account,$quota) {
+        $data['acct'] = $account;
+        $data['quota'] = $quota;
+        $response = $this->fetchData('ftp/doeditquota.html', $data);
+        if (strpos($response, 'success')) {
+            return true;
+        }
+        return false;
+    }
+
+    /*
+     * @description:Change password ,Changes the FTP account password
+     * @param string $account username of ftp account
+     * @param string $password new password
+     * @return bool returns true on success or false on failure.
+     * @access public.
+     */
+    function changePasswordOfFtp($account,$password) {
+        $data['acct'] = $account;
+        $data['password'] = $password;
+        $response = $this->fetchData('ftp/dopasswdftp.html', $data);
+        if (strpos($response, 'Changed')) {
+            return true;
+        }
+        return false;
+    }
+
+    /*
+     * @description:Delete FTP account ,Permanently removes the FTP account and 
+     * @param string $account username of ftp account
+     * @return bool Returns true on success or false on failure.
+     * @access public. 
+     */
+    function deleteFtp($account) {
+        $data['login'] = $account;
+        $response = $this->fetchData('ftp/realdodelftp.html', $data);
+        if (strpos($response, 'deleted')) {
+            return true;
+        }
+        return false;
+    }
     
     
 }
