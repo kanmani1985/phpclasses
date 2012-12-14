@@ -459,7 +459,7 @@ class cpanel {
 
     /*
      * @description:Delete email autoresponder ,
-     *  @param string $email email account
+     * @param string $email email account
      * @return bool Deletes autoresponder for email account if it exists , and returns true.
      * @access public.
      */
@@ -467,7 +467,173 @@ class cpanel {
         $this->fetchData('mail/dodelautores.html?email=' . $email . '@' . $this->cpanel_host);
         return true;
     }
+    
+    /*
+     * @description:Get default address
+     * @param string $domain domain name
+     * @return string Retrieves the default email address for the domain.
+     * @access public.
+     */
+    function getDefaultAddressOfDomain($domain) {
+        $default = explode('<b>' . $domain . '</b>', $this->fetchData('mail/def.html'));
+        if ($default[1]) {
+            $default = explode('<td>', $default[1]);
+            $default = explode('</td>', $default[1]);
+            return trim($default[0]);
+        }
+    }
+    
+    /*
+     * @description: Modify default address Changes the default email address for the domain. 
+     * @param string $adderss new default address
+     * @return bool Returns true on success or false on failure.
+     * @access public.
+     */
+    function changeDefaultAddressOfDomain($address) {
+        $data['domain'] = $this->cpanel_host;
+        $data['forward'] = $address;
+        $response = $this->fetchData('mail/dosetdef.html', $data);
+        if (strpos($response, 'is now')) {
+            return true;
+        }
+        return false;
+    }
 
+    /*
+     * @description:Park domain
+     * @return bool Returns true on success or false on failure.
+     * @access public.
+     */
+    function parkDomain() {
+        $data['domain'] = $this->cpanel_host;
+        $response = $this->fetchData('park/doaddparked.html', $data);
+        if (strpos($response, 'success') && !strpos($response, 'error')) {
+            return true;
+        }
+        return false;
+    }
+
+    /*
+     * @description:Delete parked domain
+     * @return bool Returns true on success or false on failure.
+     * @access public.
+     */
+    function unparkDomain() {
+        $data['domain'] = $this->cpanel_host;
+        $response = $this->fetchData('park/dodelparked.html', $data);
+        if (strpos($response, 'success') && !strpos($response, 'Error')) {
+            return true;
+        }
+        return false;
+    }
+
+    /*
+     * @description:Create addon domain
+     * @param string $user username or directory
+     * @param string $pass password
+     * @return bool Returns true on success or false on failure.
+     * @access public.
+     */
+    function addonDomain($user, $pass) {
+        $data['domain'] = $this->cpanel_host;
+        $data['user'] = $user;
+        $data['pass'] = $pass;
+        $response = $this->fetchData('addon/doadddomain.html', $data);
+        if (strpos($response, 'added') && !strpos($response, 'Error')) {
+            return true;
+        }
+        return false;
+    }
+
+    /*
+     * @description:Delete addon domain
+     * @return bool Returns true on success or false on failure.
+     * @access public.
+     */
+    function delAddonDomain() {
+        $data['domain'] = $this->cpanel_host;
+        $response = $this->fetchData('addon/dodeldomain.html', $data);
+        if (strpos($response, 'success') && !strpos($response, 'Error')) {
+            return true;
+        }
+        return false;
+    }
+
+    /*
+     * @description:Create subdomain
+     * @param string $subdomain name of subdomain to create
+     * @return bool Returns true on success or false on failure.
+     * @access public.
+     */
+    function createSubdomain($subdomain) {
+        $data['domain'] = $subdomain;
+        $data['rootdomain'] = $this->cpanel_host;
+        $response = $this->fetchData('subdomain/doadddomain.html', $data);
+        if (strpos($response, 'added') && !strpos($response, 'Error')) {
+            return true;
+        }
+        return false;
+    }
+    /*
+     * @description:Delete subdomain
+     * @param string $subdomain name of subdomain to delete
+     * @return bool Returns true on success or false on failure.
+     * @access public.
+     */
+    function delSubdomain($subdomain) {
+        $data['domain'] = $subdomain . '_' . $this->cpanel_host;
+        $response = $this->fetchData('subdomain/dodeldomain.html', $data);
+        if (strpos($response, 'Removed')) {
+            return true;
+        }
+        return false;
+    }
+    /*
+     * @description:Get subdomain redirection
+     * @return string Returns the URL a subdomain is redirected to.
+     * @access public.
+     */
+    function getSubdomainRedirect($subdomain) {
+        $redirect = array();
+        $data['domain'] = $subdomain . '_' . $this->cpanel_host;
+        preg_match('/40 value="([^"]*)/', $this->fetchData('subdomain/doredirectdomain.html', $data), $redirect);
+        return $redirect[1];
+    }
+
+    /*
+     * @description:Redirect subdomain ,Redirects a subdomain of the current domain to another address.
+     * @param string $subdomain name of subdomain
+     * @param string $url url to redirect to
+     * @return bool Returns true if sucsess false if fails.
+     * @access public.
+     */
+    function redirectSubdomain($subdomain, $url) {
+        $data['domain'] = $subdomain . '_' . $this->cpanel_host;
+        $data['url'] = $url;
+        $response = $this->fetchData('subdomain/saveredirect.html', $data);
+        if (strpos($response, 'redirected') && !strpos($response, 'Disabled')) {
+            return true;
+        }
+        return false;
+    }
+
+    /*
+     * @description:Remove subdomain redirection
+     * @param string $subdomain name of subdomain
+     * @return bool  Returns true if sucsess false if fails.
+     * @access public.
+     */
+    function delRedirectSubdomain($subdomain) {
+        $data['domain'] = $subdomain . '_' . $this->cpanel_host;
+        $response = $this->fetchData('subdomain/donoredirect.html', $data);
+        if (strpos($response, 'disabled')) {
+            return true;
+        }
+        return false;
+    }
+
+    
+    
     
 }
 
